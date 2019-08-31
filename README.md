@@ -40,10 +40,6 @@ Also, it's not possible to build the class libraries on device as you need a run
     sed -i 's|\tgint64       st_atime_nsec;|#undef st_atime_nsec\n#undef st_mtime_nsec\n#undef st_ctime_nsec\n\tgint64       st_atime_nsec;|g' support/map.h
     sed -i 's|return L_cuserid;|return -1;|g' support/stdio.c
 
-    # https://github.com/mono/mono/issues/12632
-    sed -i 's|/nologo|/parallel- /nologo|g' mcs/build/profiles/build.make
-    sed -i 's|/nologo|/parallel- /nologo|g' mcs/build/rules.make
-
     make
     make install
     cd ..
@@ -71,6 +67,19 @@ Change the content of /data/data/com.termux/files/usr/local/bin/msbuild into
 
     #!/bin/sh
     MONO_GC_PARAMS="nursery-size=64m,$MONO_GC_PARAMS" exec /data/data/com.termux/files/usr/local/bin/mono $MONO_OPTIONS /data/data/com.termux/files/usr/local/lib/mono/msbuild/15.0/bin/MSBuild.dll "$@"
+
+Roslyn is buggy on Mono on arm64 as it assumes the legacy x86/x86_64 memory model which grants memory access order in some situations on the metal.
+
+* https://preshing.com/20120930/weak-vs-strong-memory-models/
+* https://github.com/dotnet/roslyn/issues/24932
+* https://github.com/mono/mono/issues/12632
+* https://xamarin.github.io/bugzilla-archives/56/56546/bug.html
+* https://news.ycombinator.com/item?id=14318877
+
+This problem can not really be fixed in Mono, as there is a huge performance penalty. To workaround this problem, we have to force Roslyn to run single-threaded.
+
+    sed -i 's|"@(Compile)"|"@(Compile);/parallel-"|g' /data/data/com.termux/files/usr/local/lib/mono/msbuild/Current/bin/Roslyn/Microsoft.CSharp.Core.targets
+    sed -i 's|"@(Compile)"|"@(Compile);/parallel-"|g' /data/data/com.termux/files/usr/local/lib/mono/msbuild/Current/bin/Roslyn/Microsoft.VisualBasic.Core.targets
 
 ## Backup and Recover
 
