@@ -46,7 +46,11 @@ Also, it's not possible to build the class libraries on device as you need a run
 
 Copy class libraries from Mono directory on a PC (/usr/local/lib/mono on Linux) to /data/data/com.termux/files/usr/local/lib/mono.
 
-Add usr/local/bin to system environment variable PATH
+Some libraries may use libc.so.6, which doesn't exist on Android. We can create a symbol link to libc<span></span>.so.
+
+    ln -s /system/lib64/libc.so /data/data/com.termux/files/usr/local/lib/libc.so.6
+
+Add usr/local/bin to system environment variable PATH.
 
     echo export PATH=/data/data/com.termux/files/usr/local/bin:$PATH >> ~/.bash_profile
 
