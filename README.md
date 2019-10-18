@@ -1,4 +1,4 @@
-# How to install Mono and MSBuild inside Termux
+﻿# How to install Mono and MSBuild inside Termux
 
 ## Description
 
@@ -12,17 +12,19 @@
 
 There is no pre-compiled binary for Mono on Termux now, except for prooted Arch Linux and Ubuntu. ([40](https://github.com/termux/termux-packages/issues/40))
 
-Here I describe a process to build Mono 6.0 from source on an Android arm64 device.
+Here I describe a process to build Mono 6.4 from source on an Android arm64 device.
 
 Termux now defaults to Android 7.0 (API Level 24, /data/data/com.termux/files/usr/include/android/api-level.h), so anything requires an API level higher than that need to be disabled. I compile on an Android 8.0 device personally. I have tried to convince autoconf to use -D__ANDROID_API__=24 in function checking (for existence of pthread_getname_np, ...) but failed, so on other Android versions, more patches may be needed if you experience linkage problems.
 
 Also, it's not possible to build the class libraries on device as you need a runnable Mono or Monolite to bootstrap.
 
     pkg install wget perl python cmake clang
-    wget https://download.mono-project.com/sources/mono/mono-6.0.0.319.tar.xz
+    wget https://download.mono-project.com/sources/mono/mono-6.4.0.198.tar.xz
 
-    tar xf mono-6.0.0.319.tar.xz
-    cd mono-6.0.0.319
+    # It may show the following error but it's ok.
+    # tar: mono-6.4.0.198/external/bockbuild/bb: Cannot hard link to ‘mono-6.4.0.198/external/bockbuild/bockbuild.py’: Permission denied
+    tar xf mono-6.4.0.198.tar.xz
+    cd mono-6.4.0.198
 
     ./configure --prefix=/data/data/com.termux/files/usr/local --disable-mcs-build
 
@@ -44,7 +46,7 @@ Also, it's not possible to build the class libraries on device as you need a run
     make install
     cd ..
 
-Copy class libraries from Mono directory on a PC (/usr/local/lib/mono on Linux) to /data/data/com.termux/files/usr/local/lib/mono.
+Copy class libraries from Mono directory of the same version compiled on a Linux PC (/usr/local/lib/mono) to /data/data/com.termux/files/usr/local/lib/mono.
 
 Some libraries may use libc.so.6, which doesn't exist on Android. We can create a symbol link to libc<span></span>.so.
 
@@ -61,8 +63,8 @@ Exit and reenter bash.
 Don't try to build from source, it depends on a .Net Core version which is not shipped with Visual Studio and is very difficult to compile both on Windows or on Linux. Just download the pre-compiled binary from Mono. It contains only portable .Net binaries.
 
     pkg install p7zip
-    wget http://download.mono-project.com/repo/ubuntu/pool/main/m/msbuild/msbuild_16.1+xamarinxplat.2019.06.05.11.19-0xamarin9+ubuntu1804b1_all.deb
-    7z x msbuild_16.1+xamarinxplat.2019.06.05.11.19-0xamarin9+ubuntu1804b1_all.deb
+    wget http://download.mono-project.com/repo/ubuntu/pool/main/m/msbuild/msbuild_16.4+xamarinxplat.2019.09.09.15.03-0xamarin5+ubuntu1804b1_all.deb
+    7z x msbuild_16.4+xamarinxplat.2019.09.09.15.03-0xamarin5+ubuntu1804b1_all.deb
     tar xf data.tar
     cp -R usr/* /data/data/com.termux/files/usr/local/
     rm -rf data.tar usr
@@ -70,7 +72,7 @@ Don't try to build from source, it depends on a .Net Core version which is not s
 Change the content of /data/data/com.termux/files/usr/local/bin/msbuild into
 
     #!/bin/sh
-    MONO_GC_PARAMS="nursery-size=64m,$MONO_GC_PARAMS" exec /data/data/com.termux/files/usr/local/bin/mono $MONO_OPTIONS /data/data/com.termux/files/usr/local/lib/mono/msbuild/15.0/bin/MSBuild.dll "$@"
+    MONO_GC_PARAMS="nursery-size=64m,$MONO_GC_PARAMS" exec /data/data/com.termux/files/usr/local/bin/mono --assembly-loader=strict $MONO_OPTIONS /data/data/com.termux/files/usr/local/lib/mono/msbuild/15.0/bin/MSBuild.dll "$@"
 
 Roslyn is buggy on Mono on arm64 as it assumes the legacy x86/x86_64 memory model which grants memory access order in some situations on the metal.
 
@@ -90,9 +92,9 @@ This problem can not really be fixed in Mono, as there is a huge performance pen
 All these can be packed for later use.
 
     cd /data/data/com.termux/files/usr
-    tar cfJ mono-termux.6.0.0.319.tar.xz local
+    tar cfJ mono-termux.6.4.0.198.tar.xz local
 
 To recover, execute the following commands and don't forget to add usr/local/bin to PATH.
 
     cd /data/data/com.termux/files/usr
-    tar xf mono-termux.6.0.0.319.tar.xz
+    tar xf mono-termux.6.4.0.198.tar.xz
