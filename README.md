@@ -74,7 +74,7 @@ Change the content of /data/data/com.termux/files/usr/local/bin/msbuild into
     #!/bin/sh
     MONO_GC_PARAMS="nursery-size=64m,$MONO_GC_PARAMS" exec /data/data/com.termux/files/usr/local/bin/mono --assembly-loader=strict $MONO_OPTIONS /data/data/com.termux/files/usr/local/lib/mono/msbuild/15.0/bin/MSBuild.dll "$@"
 
-Roslyn is buggy on Mono on arm64 as it assumes the legacy x86/x86_64 memory model which grants memory access order in some situations on the metal.
+Roslyn is buggy on Mono on arm64 as it assumes the legacy x86/x86_64 memory model which guarantees memory access order in some situations on the metal.
 
 * https://preshing.com/20120930/weak-vs-strong-memory-models/
 * https://github.com/dotnet/roslyn/issues/24932
