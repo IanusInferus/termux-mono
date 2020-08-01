@@ -8,68 +8,70 @@
 
 [MSBuild](https://github.com/microsoft/msbuild) is the default build system in Mono (and .Net).
 
+Go to the last section if you want to use the prebuilt binaries.
+
 ## Build Mono from source
 
 There is no pre-compiled binary for Mono on Termux now, except for prooted Arch Linux and Ubuntu. ([40](https://github.com/termux/termux-packages/issues/40))
 
-Here I describe a process to build Mono 6.8 from source on an Android arm64 device.
+Here I describe a process to cross-compile Mono 6.10 from source on Linux.
 
-Termux now defaults to Android 7.0 (API Level 24, /data/data/com.termux/files/usr/include/android/api-level.h), so anything requires an API level higher than that need to be disabled. I compile on an Android 8.0 device personally. I have tried to convince autoconf to use -D__ANDROID_API__=24 in function checking (for existence of pthread_getname_np, ...) but failed, so on other Android versions, more patches may be needed if you experience linkage problems.
+Termux now defaults to Android 7.0 (API Level 24, /data/data/com.termux/files/usr/include/android/api-level.h). I cross-compile on Ubuntu(on WSL) and target Android 7.0.
 
-Also, it's not possible to build the class libraries on device as you need a runnable Mono or Monolite to bootstrap.
+    # at first, make sure you have mono installed on the host machine
+    # https://www.mono-project.com/download/stable/#download-lin
 
-    pkg install wget perl python cmake clang
-    wget https://download.mono-project.com/sources/mono/mono-6.8.0.105.tar.xz
+    sudo apt install wget perl python3 cmake unzip git ninja-build g++
 
-    # It may show the following error but it's ok.
-    # tar: mono-6.8.0.105/external/bockbuild/bb: Cannot hard link to ‘mono-6.8.0.105/external/bockbuild/bockbuild.py’: Permission denied
-    tar xf mono-6.8.0.105.tar.xz
-    cd mono-6.8.0.105
+    # get Android NDK from https://developer.android.com/ndk/downloads for Linux
+    # say android-ndk-r21d-linux-x86_64.zip
+    unzip android-ndk-r21d-linux-x86_64.zip
 
-    ./configure --prefix=/data/data/com.termux/files/usr/local --disable-mcs-build
+    wget https://download.mono-project.com/sources/mono/mono-6.10.0.104.tar.xz
 
-    sed -i 's|#define HAVE_PTHREAD_GETNAME_NP 1|/\* #undef HAVE_PTHREAD_GETNAME_NP \*/|g' config.h
-    sed -i 's|#define HAVE_GETPWENT 1|/\* #undef HAVE_GETPWENT \*/|g' config.h
-    sed -i 's|#define HAVE_SETPWENT 1|/\* #undef HAVE_SETPWENT \*/|g' config.h
-    sed -i 's|#define HAVE_LUTIMES 1|/\* #undef HAVE_LUTIMES \*/|g' config.h
-    sed -i 's|#define HAVE_FUTIMES 1|/\* #undef HAVE_FUTIMES \*/|g' config.h
-    sed -i 's|#define HAVE_GETDOMAINNAME 1|/\* #undef HAVE_GETDOMAINNAME \*/|g' config.h
-    sed -i 's|#define HAVE_SETDOMAINNAME 1|/\* #undef HAVE_SETDOMAINNAME \*/|g' config.h
-
-    sed -i 's|-lpthread|-lpthread -llog|g' mono/mini/Makefile
-    sed -i 's|-lpthread|-lpthread -llog|g' mono/dis/Makefile
-    sed -i 's|-lpthread|-lpthread -llog|g' tools/pedump/Makefile
-    sed -i 's|\tgint64       st_atime_nsec;|#undef st_atime_nsec\n#undef st_mtime_nsec\n#undef st_ctime_nsec\n\tgint64       st_atime_nsec;|g' support/map.h
-    sed -i 's|return L_cuserid;|return -1;|g' support/stdio.c
-
+    # compile mono for PC with .Net Class Libraries
+    mkdir mono-6.10.0.104-PC
+    tar xf mono-6.10.0.104.tar.xz -C mono-6.10.0.104-PC --strip-components=1
+    cd mono-6.10.0.104-PC
+    export CC=
+    export CXX=
+    export LDFLAGS=
+    ./configure
     make
-    make install
+    make install DESTDIR=~/mono-6.10.0.104-bin-PC
     cd ..
 
-Copy class libraries from Mono directory of the same version compiled on a Linux PC (/usr/local/lib/mono) to /data/data/com.termux/files/usr/local/lib/mono.
+    # compile mono for Android without .Net Class Libraries
+    tar xf mono-6.10.0.104.tar.xz
+    cd mono-6.10.0.104
+    # patch for log output (defaults to adb log rather than terminal)
+    sed -i 's|#if HOST_ANDROID|#if 0|g' mono/eglib/goutput.c
+    export CC="$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=aarch64-linux-androideabi24 --sysroot=$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    export CXX="$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=aarch64-linux-androideabi24 --sysroot=$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    export LDFLAGS="-lz -Wl,-rpath='\$\$ORIGIN/../lib'"
+    ./configure --host=aarch64-linux-androideabi24 --prefix=/data/data/com.termux/files/usr/local --disable-mcs-build --with-btls-android-ndk="$(realpath ..)/android-ndk-r21d" --with-btls-android-api=24 --with-btls-android-cmake-toolchain="$(realpath ..)/android-ndk-r21d/build/cmake/android.toolchain.cmake"
+    make
+    make install DESTDIR=~/mono-6.10.0.104-bin
+    cd ..
 
-Some libraries may use libc.so.6, which doesn't exist on Android. We can create a symbol link to libc<span></span>.so.
+    # copy .Net Class Libraries
+    cp -rf ~/mono-6.10.0.104-bin-PC/usr/local/lib/mono ~/mono-6.10.0.104-bin/data/data/com.termux/files/usr/local/lib/
 
-    ln -s /system/lib64/libc.so /data/data/com.termux/files/usr/local/lib/libc.so.6
-
-Add usr/local/bin to system environment variable PATH.
-
-    echo export PATH=/data/data/com.termux/files/usr/local/bin:$PATH >> ~/.bash_profile
-
-Exit and reenter bash.
+    # Some libraries may use libc.so.6, which doesn't exist on Android. We can create a symbol link to libc<span></span>.so.
+    ln -s /system/lib64/libc.so ~/mono-6.10.0.104-bin/data/data/com.termux/files/usr/local/lib/libc.so.6
 
 ## Install MSBuild
 
 Don't try to build from source, it depends on a .Net Core version which is not shipped with Visual Studio and is very difficult to compile both on Windows or on Linux. Just download the pre-compiled binary from Mono. It contains only portable .Net binaries.
 
-    pkg install p7zip
-    wget http://download.mono-project.com/repo/ubuntu/pool/main/m/msbuild/msbuild_16.5+xamarinxplat.2020.01.10.05.36-0xamarin1+ubuntu1804b1_all.deb
-    7z x msbuild_16.5+xamarinxplat.2020.01.10.05.36-0xamarin1+ubuntu1804b1_all.deb
+    sudo apt install p7zip-full
+    wget http://download.mono-project.com/repo/ubuntu/pool/main/m/msbuild/msbuild_16.6+xamarinxplat.2020.04.29.14.43-0xamarin5+ubuntu2004b1_all.deb
+    7z x msbuild_16.6+xamarinxplat.2020.04.29.14.43-0xamarin5+ubuntu2004b1_all.deb
     tar xf data.tar
-    cp -R usr/* /data/data/com.termux/files/usr/local/
+    cp -R usr/* ~/mono-6.10.0.104-bin/data/data/com.termux/files/usr/local/
     rm -rf data.tar usr
 
-Change the content of /data/data/com.termux/files/usr/local/bin/msbuild into
+Change the content of ~/mono-6.10.0.104-bin/data/data/com.termux/files/usr/local/bin/msbuild into
 
     #!/bin/sh
     MONO_GC_PARAMS="nursery-size=64m,$MONO_GC_PARAMS" exec /data/data/com.termux/files/usr/local/bin/mono --assembly-loader=strict $MONO_OPTIONS /data/data/com.termux/files/usr/local/lib/mono/msbuild/15.0/bin/MSBuild.dll "$@"
@@ -84,17 +86,21 @@ Roslyn is buggy on Mono on arm64 as it assumes the legacy x86/x86_64 memory mode
 
 This problem can not really be fixed in Mono, as there is a huge performance penalty. To workaround this problem, we have to force Roslyn to run single-threaded.
 
-    sed -i 's|"@(Compile)"|"@(Compile);/parallel-"|g' /data/data/com.termux/files/usr/local/lib/mono/msbuild/Current/bin/Roslyn/Microsoft.CSharp.Core.targets
-    sed -i 's|"@(Compile)"|"@(Compile);/parallel-"|g' /data/data/com.termux/files/usr/local/lib/mono/msbuild/Current/bin/Roslyn/Microsoft.VisualBasic.Core.targets
+    sed -i 's|"@(Compile)"|"@(Compile);/parallel-"|g' ~/mono-6.10.0.104-bin/data/data/com.termux/files/usr/local/lib/mono/msbuild/Current/bin/Roslyn/Microsoft.CSharp.Core.targets
+    sed -i 's|"@(Compile)"|"@(Compile);/parallel-"|g' ~/mono-6.10.0.104-bin/data/data/com.termux/files/usr/local/lib/mono/msbuild/Current/bin/Roslyn/Microsoft.VisualBasic.Core.targets
 
-## Backup and Recover
+## Transfer to device
 
-All these can be packed for later use.
+Pack all files.
+
+    cd ~/mono-6.10.0.104-bin/data/data/com.termux/files/usr
+    tar cfJ mono-termux.6.10.0.104.tar.xz local
+
+Extract files on device.
 
     cd /data/data/com.termux/files/usr
-    tar cfJ mono-termux.6.8.0.105.tar.xz local
+    tar xf mono-termux.6.10.0.104.tar.xz
 
-To recover, execute the following commands and don't forget to add usr/local/bin to PATH.
+Add usr/local/bin to system environment variable PATH if it isn't already there.
 
-    cd /data/data/com.termux/files/usr
-    tar xf mono-termux.6.8.0.105.tar.xz
+    echo export PATH=/data/data/com.termux/files/usr/local/bin:$PATH >> ~/.bash_profile
