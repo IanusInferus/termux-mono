@@ -46,6 +46,7 @@ Termux now defaults to Android 7.0 (API Level 24, /data/data/com.termux/files/us
     cd mono-6.10.0.104
     # patch for log output (defaults to adb log rather than terminal)
     sed -i 's|#if HOST_ANDROID|#if 0|g' mono/eglib/goutput.c
+    sed -i 's/#if defined(HOST_ANDROID) || !defined(HAVE_ATEXIT)/#if 0/g' mono/utils/mono-proclib.c
     export CC="$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=aarch64-linux-androideabi24 --sysroot=$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
     export CXX="$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=aarch64-linux-androideabi24 --sysroot=$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
     export LDFLAGS="-lz -Wl,-rpath='\$\$ORIGIN/../lib'"
