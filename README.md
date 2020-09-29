@@ -58,7 +58,7 @@ Termux now defaults to Android 7.0 (API Level 24, /data/data/com.termux/files/us
     # copy .Net Class Libraries
     cp -rf ~/mono-6.10.0.104-bin-PC/usr/local/lib/mono ~/mono-6.10.0.104-bin/data/data/com.termux/files/usr/local/lib/
 
-    # Some libraries may use libc.so.6, which doesn't exist on Android. We can create a symbol link to libc<span></span>.so.
+    # Some libraries may use libc.so.6, which doesn't exist on Android. We can create a symbol link to libc.so.
     ln -s /system/lib64/libc.so ~/mono-6.10.0.104-bin/data/data/com.termux/files/usr/local/lib/libc.so.6
 
 ## Install MSBuild
