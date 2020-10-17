@@ -36,7 +36,7 @@ Termux now defaults to Android 7.0 (API Level 24, /data/data/com.termux/files/us
     export CC=
     export CXX=
     export LDFLAGS=
-    ./configure
+    ./configure --disable-system-aot
     make
     make install "DESTDIR=$(realpath ..)/mono-6.12.0.90-bin-PC"
     cd ..
@@ -76,10 +76,10 @@ Don't try to build from source, it depends on a .Net Core version which is not s
     cp -R usr/* mono-6.12.0.90-bin/data/data/com.termux/files/usr/local/
     rm -rf data.tar usr
 
-Change the content of mono-6.12.0.90-bin/data/data/com.termux/files/usr/local/bin/msbuild into
+Modify the path of msbuild command.
 
-    #!/bin/sh
-    MONO_GC_PARAMS="nursery-size=64m,$MONO_GC_PARAMS" exec /data/data/com.termux/files/usr/local/bin/mono --assembly-loader=strict $MONO_OPTIONS /data/data/com.termux/files/usr/local/lib/mono/msbuild/15.0/bin/MSBuild.dll "$@"
+    sed -i 's|/usr/bin|/data/data/com.termux/files/usr/local/bin|g' mono-6.12.0.90-bin/data/data/com.termux/files/usr/local/bin/msbuild
+    sed -i 's|/usr/lib|/data/data/com.termux/files/usr/local/lib|g' mono-6.12.0.90-bin/data/data/com.termux/files/usr/local/bin/msbuild
 
 Roslyn is buggy on Mono on arm64 as it assumes the legacy x86/x86_64 memory model which guarantees memory access order in some situations on the metal.
 
@@ -99,13 +99,26 @@ This problem can not really be fixed in Mono, as there is a huge performance pen
 Pack all files.
 
     cd mono-6.12.0.90-bin/data/data/com.termux/files/usr
-    tar cfJ mono-termux.6.12.0.90-arm64.tar.xz local
+    tar cfJ mono-termux.6.12.0.90-arm64-androideabi24.tar.xz local
 
 Extract files on device.
 
     cd /data/data/com.termux/files/usr
-    tar xf mono-termux.6.12.0.90-arm64.tar.xz
+    tar xf mono-termux.6.12.0.90-arm64-androideabi24.tar.xz
 
 Add usr/local/bin to system environment variable PATH if it isn't already there.
 
     echo export PATH=/data/data/com.termux/files/usr/local/bin:$PATH >> ~/.bash_profile
+
+## Build AOT cache for system libraries
+
+For our binaries to run faster, we can build AOT cache for some system libraries on device.
+
+    cd /data/data/com.termux/files/usr/local/lib/mono/4.5
+    mono --aot csc.exe
+    mono --aot mcs.exe
+    mono --aot Microsoft.CodeAnalysis.CSharp.dll
+    mono --aot Microsoft.CodeAnalysis.dll
+    mono --aot mscorlib.dll
+    mono --aot System.Collections.Immutable.dll
+    mono --aot System.Reflection.Metadata.dll
