@@ -50,10 +50,12 @@ Termux now defaults to Android 7.0 (API Level 24, /data/data/com.termux/files/us
     # sed -i 's|#define USE_TKILL_ON_ANDROID 1||g' mono/metadata/threads.c # only do this if you need to run on armv7a
     # sed -i 's|#define USE_TKILL_ON_ANDROID 1||g' mono/utils/mono-threads-posix.c # only do this if you need to run on armv7a
     api_level=24 # api level can be any of 21-24,26-30
-    arch=aarch64-linux-androideabi$api_level # change to armv7a-linux-androideabi$api_level if you need to run on armv7a
+    arch=aarch64-linux-androideabi$api_level
+    # arch=armv7a-linux-androideabi$api_level # only do this if you need to run on armv7a
     export CC="$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=$arch --sysroot=$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
     export CXX="$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=$arch --sysroot=$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-    export LDFLAGS="-lz -Wl,-rpath='\$\$ORIGIN/../lib'"
+    export LDFLAGS="-lz -Wl,-rpath='\$\$ORIGIN/../lib' -Wl,--enable-new-dtags"
+    # export LDFLAGS="-lz" # only do this if you need to run on Android Api Level < 24, see https://github.com/termux/termux-packages/issues/2071
     ./configure --host=$arch --prefix=/data/data/com.termux/files/usr/local --disable-mcs-build --with-btls-android-ndk="$(realpath ..)/android-ndk-r21d" --with-btls-android-api=$api_level --with-btls-android-cmake-toolchain="$(realpath ..)/android-ndk-r21d/build/cmake/android.toolchain.cmake" # add --with-btls-android-ndk-asm-workaround if you need to run on armv7a
     make
     make install "DESTDIR=$(realpath ..)/mono-6.12.0.90-bin"
@@ -109,6 +111,7 @@ Extract files on device.
 Add usr/local/bin to system environment variable PATH if it isn't already there.
 
     echo export PATH=/data/data/com.termux/files/usr/local/bin:$PATH >> ~/.bash_profile
+    # echo export LD_LIBRARY_PATH=/data/data/com.termux/files/usr/local/lib:$LD_LIBRARY_PATH >> ~/.bash_profile # only do this if you need to run on Android Api Level < 24
 
 ## Build AOT cache for system libraries
 
