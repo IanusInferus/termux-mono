@@ -44,19 +44,29 @@ Termux now defaults to Android 7.0 (API Level 24, /data/data/com.termux/files/us
     # compile mono for Android without .Net Class Libraries
     tar xf mono-6.12.0.90.tar.xz
     cd mono-6.12.0.90
+    arch=aarch64 # arch can be any of aarch64, armv7a
+    api_level=24 # api level can be any of 21-24,26-30
     # patch for log output (defaults to adb log rather than terminal)
     sed -i 's|#if HOST_ANDROID|#if 0|g' mono/eglib/goutput.c
     sed -i 's/#if defined(HOST_ANDROID) || !defined(HAVE_ATEXIT)/#if 0/g' mono/utils/mono-proclib.c
-    # sed -i 's|#define USE_TKILL_ON_ANDROID 1||g' mono/metadata/threads.c # only do this if you need to run on armv7a
-    # sed -i 's|#define USE_TKILL_ON_ANDROID 1||g' mono/utils/mono-threads-posix.c # only do this if you need to run on armv7a
-    api_level=24 # api level can be any of 21-24,26-30
-    arch=aarch64-linux-androideabi$api_level
-    # arch=armv7a-linux-androideabi$api_level # only do this if you need to run on armv7a
-    export CC="$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=$arch --sysroot=$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-    export CXX="$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=$arch --sysroot=$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-    export LDFLAGS="-lz -Wl,-rpath='\$\$ORIGIN/../lib' -Wl,--enable-new-dtags"
-    # export LDFLAGS="-lz" # only do this if you need to run on Android Api Level < 24, see https://github.com/termux/termux-packages/issues/2071
-    ./configure --host=$arch --prefix=/data/data/com.termux/files/usr/local --disable-mcs-build --with-btls-android-ndk="$(realpath ..)/android-ndk-r21d" --with-btls-android-api=$api_level --with-btls-android-cmake-toolchain="$(realpath ..)/android-ndk-r21d/build/cmake/android.toolchain.cmake" # add --with-btls-android-ndk-asm-workaround if you need to run on armv7a
+    if [ "$arch" = "armv7a" ]; then
+      sed -i 's|#define USE_TKILL_ON_ANDROID 1||g' mono/metadata/threads.c
+      sed -i 's|#define USE_TKILL_ON_ANDROID 1||g' mono/utils/mono-threads-posix.c
+    fi
+    target=$arch-linux-androideabi$api_level
+    export CC="$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=$target --sysroot=$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    export CXX="$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=$target --sysroot=$(realpath ..)/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+    if [ "$api_level" -ge "24" ]; then
+      export LDFLAGS="-lz -Wl,-rpath='\$\$ORIGIN/../lib' -Wl,--enable-new-dtags"
+    else
+      export LDFLAGS="-lz" # see https://github.com/termux/termux-packages/issues/2071
+    fi
+    if [ "$arch" = "armv7a" ]; then
+      extra_flags=--with-btls-android-ndk-asm-workaround
+    else
+      extra_flags=
+    fi
+    ./configure --host=$arch --prefix=/data/data/com.termux/files/usr/local --disable-mcs-build --with-btls-android-ndk="$(realpath ..)/android-ndk-r21d" --with-btls-android-api=$api_level --with-btls-android-cmake-toolchain="$(realpath ..)/android-ndk-r21d/build/cmake/android.toolchain.cmake" $extra_flags
     make
     make install "DESTDIR=$(realpath ..)/mono-6.12.0.90-bin"
     cd ..
@@ -111,7 +121,9 @@ Extract files on device.
 Add usr/local/bin to system environment variable PATH if it isn't already there.
 
     echo export PATH=/data/data/com.termux/files/usr/local/bin:$PATH >> ~/.bash_profile
-    # echo export LD_LIBRARY_PATH=/data/data/com.termux/files/usr/local/lib:$LD_LIBRARY_PATH >> ~/.bash_profile # only do this if you need to run on Android Api Level < 24
+
+    # only do this if you use a version built for Android armv7a and Api Level < 24
+    # echo export LD_LIBRARY_PATH=/data/data/com.termux/files/usr/local/lib:$LD_LIBRARY_PATH >> ~/.bash_profile
 
 ## Build AOT cache for system libraries
 
