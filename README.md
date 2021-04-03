@@ -16,7 +16,7 @@ There is no pre-compiled binary for Mono on Termux now, except for prooted Arch 
 
 Here I describe a process to cross-compile Mono 6.12 from source on Linux.
 
-Termux now defaults to Android 7.0 (API Level 24, /data/data/com.termux/files/usr/include/android/api-level.h). I cross-compile on Ubuntu 20.04 x86_64 and target Android 7.0.
+Termux now defaults to Android 7.0 (API Level 24, `/data/data/com.termux/files/usr/include/android/api-level.h`). I cross-compile on Ubuntu 20.04 x86_64 and target Android 7.0.
 
     # at first, make sure you have mono installed on the host machine
     # https://www.mono-project.com/download/stable/#download-lin
@@ -147,3 +147,13 @@ For our binaries to run faster, we can build AOT cache for some system libraries
     mono --aot mscorlib.dll
     mono --aot System.Collections.Immutable.dll
     mono --aot System.Reflection.Metadata.dll
+
+## SSL certificate store
+
+To use SSL, a certificate store is required.
+
+Android provides a system certificate store at `/system/etc/security/cacerts` with read-only access.
+
+Mono can use Android system certificate store, but requires Mono for Android (Xamarin Android).
+
+But we can also use a separate certificate store like on Linux. Just copy `/usr/share/.mono` from a Linux device with Mono installed to `~/.config/.mono` on the Android device.
