@@ -132,7 +132,7 @@ Add usr/local/bin to system environment variable PATH if it isn't already there.
 
     echo export PATH=/data/data/com.termux/files/usr/local/bin:$PATH >> ~/.bash_profile
 
-    # only do this if you use a version built for Android armv7a and Api Level < 24
+    # only do this if you use a version built for Api Level < 24
     # echo export LD_LIBRARY_PATH=/data/data/com.termux/files/usr/local/lib:$LD_LIBRARY_PATH >> ~/.bash_profile
 
 ## Build AOT cache for system libraries
