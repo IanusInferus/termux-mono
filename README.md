@@ -8,7 +8,7 @@
 
 [MSBuild](https://github.com/microsoft/msbuild) is the default build system in Mono (and .Net).
 
-Go to the last section if you want to use the prebuilt binaries.
+Skip `Build Mono from source` and `Install MSBuild` if you want to use the prebuilt binaries from `Releases`.
 
 ## Build Mono from source
 
@@ -87,7 +87,7 @@ Termux now defaults to Android 7.0 (API Level 24, `/data/data/com.termux/files/u
 
 ## Install MSBuild
 
-Don't try to build from source, it depends on a .Net Core version which is not shipped with Visual Studio and is very difficult to compile both on Windows or on Linux. Just download the pre-compiled binary from Mono. It contains only portable .Net binaries.
+Don't try to build MSBuild from source, it depends on a .Net Core version which is not shipped with Visual Studio and is very difficult to compile both on Windows or on Linux. Just download the pre-compiled binary from Mono. It contains only portable .Net binaries.
 
     sudo apt install p7zip-full
     wget http://download.mono-project.com/repo/ubuntu/pool/main/m/msbuild/msbuild_16.6+xamarinxplat.2021.01.15.16.11-0xamarin1+ubuntu2004b1_all.deb
