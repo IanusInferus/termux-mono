@@ -101,6 +101,8 @@ Modify the path of msbuild command.
     sed -i 's|/usr/bin|/data/data/com.termux/files/usr/local/bin|g' mono-6.12.0.122-bin/data/data/com.termux/files/usr/local/bin/msbuild
     sed -i 's|/usr/lib|/data/data/com.termux/files/usr/local/lib|g' mono-6.12.0.122-bin/data/data/com.termux/files/usr/local/bin/msbuild
 
+<del>
+
 Roslyn is buggy on Mono on arm64 as it assumes the legacy x86/x86_64 memory model which guarantees memory access order in some situations on the metal.
 
 * https://preshing.com/20120930/weak-vs-strong-memory-models/
@@ -113,6 +115,10 @@ This problem can not really be fixed in Mono, as there is a huge performance pen
 
     sed -i 's|"@(Compile)"|"@(Compile);/parallel-"|g' mono-6.12.0.122-bin/data/data/com.termux/files/usr/local/lib/mono/msbuild/Current/bin/Roslyn/Microsoft.CSharp.Core.targets
     sed -i 's|"@(Compile)"|"@(Compile);/parallel-"|g' mono-6.12.0.122-bin/data/data/com.termux/files/usr/local/lib/mono/msbuild/Current/bin/Roslyn/Microsoft.VisualBasic.Core.targets
+
+</del>
+
+In spite of the huge performance penalty, mono has [implemented](https://github.com/mono/mono/pull/17136) legacy x86/x86_64 memory model (total store order). The preceding patch is not necessary.
 
 ## Transfer to device
 
